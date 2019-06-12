@@ -6,6 +6,7 @@
   </PropertyGroup>
 <PropertyGroup>
     <CodeAnalysisRuleSet>juniormind.ruleset</CodeAnalysisRuleSet>
+    <LangVersion>7.1</LangVersion>
 </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.CodeAnalysis.FxCopAnalyzers" Version="2.9.3" />
