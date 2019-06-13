@@ -81,6 +81,26 @@ namespace DictionaryFacts
         }
 
         [Fact]
+        public void Test_Enumerator_Should_Properly_Work_When_Dictionary_Has_Empty_Elements()
+        {
+            //Given
+            var dictionary = new HashtableDictionary<int, int>
+            {
+                { 1, 1 },
+                { 2, 1 },
+                { 3, 1 },
+            };
+            //When
+            dictionary.Remove(1);
+            dictionary.Remove(2);
+            var enumerator = dictionary.GetEnumerator();
+            //Then
+            Assert.True(enumerator.MoveNext());
+            Assert.Equal(3, enumerator.Current.Key);
+            Assert.False(enumerator.MoveNext());
+        }
+
+        [Fact]
         public void Test_AddMethod_Should_Correctly_Add_Int_Key_And_Value_No_Conflict()
         {
             //Given
@@ -359,20 +379,6 @@ namespace DictionaryFacts
         }
 
         [Fact]
-        public void Test_Exception_SetIndexer_Should_Throw_Exception_When_Key_Is_NOT_found()
-        {
-            //Given
-            var dictionary = new HashtableDictionary<string, string>
-            {
-                { "11", "1"}
-            };
-            //When
-            var exception = Assert.Throws<KeyNotFoundException>(() => dictionary["100"] = "300");
-            //Then
-            Assert.Equal("Key 100 was not found! ", exception.Message);
-        }
-
-        [Fact]
         public void Test_CopyMethod_Array_Has_Enough_Capacity()
         {
             //Given
@@ -545,23 +551,23 @@ namespace DictionaryFacts
         }
 
         [Fact]
-        public void Test_AddMethod_Should_Resize_When_Dictionary_Is_full()
+        public void Test_AddMethod_When_array_is_FULL()
         {
             //Given
-            var dictionary = new HashtableDictionary<int, int>()
-            {
-                { 0, 100},
-                {1, 100 },
-                {3, 100 },
-                {5, 100 },
-                {16, 100 }
-            };
+            KeyValuePair<int, int> pair = new KeyValuePair<int, int>(4, 200);
+            var dictionary = new HashtableDictionary<int, int>();
+            dictionary.Add(0, 100);
+            dictionary.Add(1, 100);
+            dictionary.Add(pair);
+            dictionary.Add(5, 100);
+            dictionary.Add(16, 100);
             //When
-            dictionary.Add(2, 100);
+            dictionary.Remove(pair);
+            dictionary.Add(4, 100);
             //Then
-            Assert.True(dictionary.ContainsKey(1));
-            Assert.True(dictionary.ContainsKey(2));
-            Assert.Equal(6, dictionary.Count);
+            Assert.DoesNotContain(pair, dictionary);
+            Assert.True(dictionary.ContainsKey(4));
+            Assert.Equal(5, dictionary.Count);
         }
 
     }
