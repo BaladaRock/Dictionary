@@ -1,20 +1,21 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Text;
 
 namespace Dictionary
 {
     public class HashtableDictionary<TKey, TValue> : IDictionary<TKey, TValue>
     {
         private readonly int[] buckets;
-        private readonly Element[] elements;
+        private readonly LinkedList<int> chainOfElements = new LinkedList<int>();
+        private Element[] elements;
 
         public HashtableDictionary(int bucketSize = 5, int elementSize = 5)
         {
             buckets = new int[bucketSize];
             Array.Fill(buckets, -1);
 
+            chainOfElements.AddFirst(-1);
             elements = new Element[elementSize];
             Count = 0;
         }
@@ -67,7 +68,8 @@ namespace Dictionary
             set
             {
                 ThrowReadOnly();
-                ThrowArgumentIsNull(key);
+                AddToLinkedList(key);
+
                 if (FindElement(key) == -1)
                 {
                     throw new KeyNotFoundException($"Key {key} was not found! ");
@@ -80,6 +82,9 @@ namespace Dictionary
         public void Add(TKey key, TValue value)
         {
             ThrowAddExceptions(key);
+            AddToLinkedList(key);
+            EnsureCapacity();
+
             elements[Count].Update(key, value);
 
             int bucketIndex = GetFirstBucketPosition(key);
@@ -159,6 +164,7 @@ namespace Dictionary
             else
             {
                 buckets[GetFirstBucketPosition(key)] = elements[index].Next;
+                chainOfElements.AddFirst(index);
             }
 
             Count--;
@@ -212,6 +218,32 @@ namespace Dictionary
             ThrowReadOnly();
             ThrowArgumentIsNull(key);
             ThrowArgument(key);
+        }
+
+        private void EnsureCapacity()
+        {
+            if (Count != elements.Length)
+            {
+                return;
+            }
+
+            ResizeArray();
+        }
+
+        private void ResizeArray()
+        {
+            int doubleLength = elements.Length * 2;
+            var newElements = new Element[elements.Length];
+            Array.Resize(ref elements, doubleLength);
+            MoveElements(newElements);
+        }
+
+        private void MoveElements(Element[] newElements)
+        {
+            for (int i = 0; i < Count; i++)
+            {
+                newElements[i] = elements[i];
+            }
         }
 
         private void ThrowReadOnly()
@@ -319,6 +351,19 @@ namespace Dictionary
             return index != -1 && elements[index].Value.Equals(value)
                 ? index
                 : -1;
+        }
+
+        private void AddToLinkedList(TKey key)
+        {
+            if (chainOfElements.First.Value == -1)
+            {
+                return;
+            }
+
+            int bucketIndex = GetFirstBucketPosition(key);
+            chainOfElements.AddFirst(bucketIndex);
+            buckets[bucketIndex] = chainOfElements.First.Value;
+            Count++;
         }
 
         private struct Element
