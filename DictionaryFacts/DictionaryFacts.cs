@@ -544,5 +544,25 @@ namespace DictionaryFacts
             Assert.False(dictionary.ContainsKey(11));
         }
 
+        [Fact]
+        public void Test_AddMethod_Should_Resize_When_Dictionary_Is_full()
+        {
+            //Given
+            var dictionary = new HashtableDictionary<int, int>()
+            {
+                { 0, 100},
+                {1, 100 },
+                {3, 100 },
+                {5, 100 },
+                {16, 100 }
+            };
+            //When
+            dictionary.Add(2, 100);
+            //Then
+            Assert.True(dictionary.ContainsKey(1));
+            Assert.True(dictionary.ContainsKey(2));
+            Assert.Equal(6, dictionary.Count);
+        }
+
     }
 }
