@@ -7,18 +7,22 @@ namespace Dictionary
     public class HashtableDictionary<TKey, TValue> : IDictionary<TKey, TValue>
     {
         private readonly int[] buckets;
-        private readonly LinkedList<int> chainOfElements = new LinkedList<int>();
-        private Element[] elements;
+        private readonly Element[] elements;
+        private int freeIndex;
 
         public HashtableDictionary(int bucketSize = 5, int elementSize = 5)
         {
             buckets = new int[bucketSize];
             Array.Fill(buckets, -1);
 
-            chainOfElements.AddFirst(-1);
+            freeIndex = -1;
             elements = new Element[elementSize];
             Count = 0;
         }
+
+        public int Count { get; private set; }
+
+        public bool IsReadOnly { get; private set; }
 
         public ICollection<TKey> Keys
         {
@@ -48,10 +52,6 @@ namespace Dictionary
             }
         }
 
-        public int Count { get; private set; }
-
-        public bool IsReadOnly { get; private set; }
-
         public TValue this[TKey key]
         {
             get
@@ -68,11 +68,9 @@ namespace Dictionary
             set
             {
                 ThrowReadOnly();
-                AddToLinkedList(key);
-
                 if (FindElement(key) == -1)
                 {
-                    throw new KeyNotFoundException($"Key {key} was not found! ");
+                    Count++;
                 }
 
                 elements[FindElement(key)].Value = value;
@@ -82,24 +80,37 @@ namespace Dictionary
         public void Add(TKey key, TValue value)
         {
             ThrowAddExceptions(key);
-            AddToLinkedList(key);
-            EnsureCapacity();
-
-            elements[Count].Update(key, value);
 
             int bucketIndex = GetFirstBucketPosition(key);
+            int index = FindNewEmptyPosition();
+            elements[index].Update(key, value);
+
             if (buckets[bucketIndex] != -1)
             {
-                elements[Count].Next = buckets[bucketIndex];
+                elements[index].Next = buckets[bucketIndex];
             }
 
-            buckets[bucketIndex] = Count;
+            buckets[bucketIndex] = index;
             Count++;
         }
 
         public void Add(KeyValuePair<TKey, TValue> item)
         {
             Add(item.Key, item.Value);
+        }
+
+        public HashtableDictionary<TKey, TValue> AsReadOnly()
+        {
+            var newDictionary = new HashtableDictionary<TKey, TValue>();
+            var enumerator = GetEnumerator();
+            while (enumerator.MoveNext())
+            {
+                newDictionary.Add(enumerator.Current);
+            }
+
+            newDictionary.IsReadOnly = true;
+
+            return newDictionary;
         }
 
         public void Clear()
@@ -135,8 +146,15 @@ namespace Dictionary
 
         public IEnumerator<KeyValuePair<TKey, TValue>> GetEnumerator()
         {
-            for (int i = 0; i < Count; i++)
+            int counter = Count;
+            for (int i = 0; i < counter; i++)
             {
+                if (!ContainsKey(elements[i].Key))
+                {
+                    counter++;
+                    continue;
+                }
+
                 yield return CreateKeyValuePair(elements[i]);
             }
         }
@@ -164,9 +182,10 @@ namespace Dictionary
             else
             {
                 buckets[GetFirstBucketPosition(key)] = elements[index].Next;
-                chainOfElements.AddFirst(index);
             }
 
+            elements[index].Next = freeIndex;
+            freeIndex = index;
             Count--;
             return true;
         }
@@ -193,124 +212,6 @@ namespace Dictionary
 
             value = elements[FindElement(key)].Value;
             return true;
-        }
-
-        public HashtableDictionary<TKey, TValue> AsReadOnly()
-        {
-            var newDictionary = new HashtableDictionary<TKey, TValue>();
-            var enumerator = GetEnumerator();
-            while (enumerator.MoveNext())
-            {
-                newDictionary.Add(enumerator.Current);
-            }
-
-            newDictionary.IsReadOnly = true;
-            return newDictionary;
-        }
-
-        private int GetFirstBucketPosition(TKey key)
-        {
-            return Math.Abs(key.GetHashCode()) % buckets.Length;
-        }
-
-        private void ThrowAddExceptions(TKey key)
-        {
-            ThrowReadOnly();
-            ThrowArgumentIsNull(key);
-            ThrowArgument(key);
-        }
-
-        private void EnsureCapacity()
-        {
-            if (Count != elements.Length)
-            {
-                return;
-            }
-
-            ResizeArray();
-        }
-
-        private void ResizeArray()
-        {
-            int doubleLength = elements.Length * 2;
-            var newElements = new Element[elements.Length];
-            Array.Resize(ref elements, doubleLength);
-            MoveElements(newElements);
-        }
-
-        private void MoveElements(Element[] newElements)
-        {
-            for (int i = 0; i < Count; i++)
-            {
-                newElements[i] = elements[i];
-            }
-        }
-
-        private void ThrowReadOnly()
-        {
-            if (!IsReadOnly)
-            {
-                return;
-            }
-
-            throw new NotSupportedException("List is readonly!\n");
-        }
-
-        private void ThrowArgument(TKey key)
-        {
-            if (!ContainsKey(key))
-            {
-                return;
-            }
-
-            throw new ArgumentException($"Key {key} already exists in dictionary!");
-        }
-
-        private void ThrowArgumentIsNull(TKey key)
-        {
-            if (key != null)
-            {
-                return;
-            }
-
-            throw new ArgumentNullException(paramName: nameof(key));
-        }
-
-        private void ThrowCopyToExceptions(KeyValuePair<TKey, TValue>[] array, int arrayIndex)
-        {
-            ThrowArrayIsNull(array);
-            ThrowIndexException(arrayIndex);
-            ThrowArgumentException(array, arrayIndex);
-        }
-
-        private void ThrowArgumentException(KeyValuePair<TKey, TValue>[] array, int arrayIndex)
-        {
-            if (array.Length >= Count + arrayIndex)
-            {
-                return;
-            }
-
-            throw new ArgumentException(message: "Copying proccess cannot be initialised\n", paramName: nameof(array));
-        }
-
-        private void ThrowIndexException(int arrayIndex)
-        {
-            if (arrayIndex >= 0)
-            {
-                return;
-            }
-
-            throw new ArgumentOutOfRangeException(paramName: nameof(arrayIndex), message: "Give a valid index!\n");
-        }
-
-        private void ThrowArrayIsNull(KeyValuePair<TKey, TValue>[] array)
-        {
-            if (array != null)
-            {
-                return;
-            }
-
-            throw new ArgumentNullException(paramName: nameof(array));
         }
 
         private KeyValuePair<TKey, TValue> CreateKeyValuePair(Element element)
@@ -353,26 +254,104 @@ namespace Dictionary
                 : -1;
         }
 
-        private void AddToLinkedList(TKey key)
+        private int FindNewEmptyPosition()
         {
-            if (chainOfElements.First.Value == -1)
+            if (freeIndex != -1)
+            {
+                var temp = freeIndex;
+                freeIndex = elements[freeIndex].Next;
+                return temp;
+            }
+
+            return Count;
+        }
+
+        private int GetFirstBucketPosition(TKey key)
+        {
+            return Math.Abs(key.GetHashCode()) % buckets.Length;
+        }
+
+        private void ThrowAddExceptions(TKey key)
+        {
+            ThrowReadOnly();
+            ThrowArgumentIsNull(key);
+            ThrowArgument(key);
+        }
+
+        private void ThrowArgument(TKey key)
+        {
+            if (!ContainsKey(key))
             {
                 return;
             }
 
-            int bucketIndex = GetFirstBucketPosition(key);
-            chainOfElements.AddFirst(bucketIndex);
-            buckets[bucketIndex] = chainOfElements.First.Value;
-            Count++;
+            throw new ArgumentException($"Key {key} already exists in dictionary!");
+        }
+
+        private void ThrowArgumentException(KeyValuePair<TKey, TValue>[] array, int arrayIndex)
+        {
+            if (array.Length >= Count + arrayIndex)
+            {
+                return;
+            }
+
+            throw new ArgumentException(message: "Copying proccess cannot be initialised\n", paramName: nameof(array));
+        }
+
+        private void ThrowArgumentIsNull(TKey key)
+        {
+            if (key != null)
+            {
+                return;
+            }
+
+            throw new ArgumentNullException(paramName: nameof(key));
+        }
+
+        private void ThrowArrayIsNull(KeyValuePair<TKey, TValue>[] array)
+        {
+            if (array != null)
+            {
+                return;
+            }
+
+            throw new ArgumentNullException(paramName: nameof(array));
+        }
+
+        private void ThrowCopyToExceptions(KeyValuePair<TKey, TValue>[] array, int arrayIndex)
+        {
+            ThrowArrayIsNull(array);
+            ThrowIndexException(arrayIndex);
+            ThrowArgumentException(array, arrayIndex);
+        }
+
+        private void ThrowIndexException(int arrayIndex)
+        {
+            if (arrayIndex >= 0)
+            {
+                return;
+            }
+
+            throw new ArgumentOutOfRangeException(paramName: nameof(arrayIndex), message: "Give a valid index!\n");
+        }
+
+        private void ThrowReadOnly()
+        {
+            if (!IsReadOnly)
+            {
+                return;
+            }
+
+            throw new NotSupportedException("List is readonly!\n");
         }
 
         private struct Element
         {
             public TKey Key { get; set; }
 
-            public TValue Value { get; set; }
-
             public int Next { get; set; }
+
+            public TValue Value { get; set; }
 
             public void Update(TKey key, TValue value, int next = -1)
             {
