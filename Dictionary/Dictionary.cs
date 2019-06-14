@@ -146,16 +146,12 @@ namespace Dictionary
 
         public IEnumerator<KeyValuePair<TKey, TValue>> GetEnumerator()
         {
-            int counter = Count;
-            for (int i = 0; i < counter; i++)
+            for (int i = 0; i < buckets.Length; i++)
             {
-                if (!ContainsKey(elements[i].Key))
+                for (int j = buckets[i]; j != -1; j = elements[j].Next)
                 {
-                    counter++;
-                    continue;
+                    yield return CreateKeyValuePair(elements[j]);
                 }
-
-                yield return CreateKeyValuePair(elements[i]);
             }
         }
 
