@@ -70,13 +70,13 @@ namespace DictionaryFacts
             dictionary.Add(8, 3);
             enumerator.MoveNext();
             //Then
-            Assert.Equal(new KeyValuePair<int, int>(1, 1), enumerator.Current);
-            Assert.True(enumerator.MoveNext());
             Assert.Equal(new KeyValuePair<int, int>(6, 2), enumerator.Current);
             Assert.True(enumerator.MoveNext());
-            Assert.Equal(new KeyValuePair<int, int>(3, 100), enumerator.Current);
+            Assert.Equal(new KeyValuePair<int, int>(1, 1), enumerator.Current);
             Assert.True(enumerator.MoveNext());
             Assert.Equal(new KeyValuePair<int, int>(8, 3), enumerator.Current);
+            Assert.True(enumerator.MoveNext());
+            Assert.Equal(new KeyValuePair<int, int>(3, 100), enumerator.Current);
             Assert.False(enumerator.MoveNext());
         }
 
@@ -120,20 +120,22 @@ namespace DictionaryFacts
         public void Test_AddMethod_Should_Correctly_Add_Same_Hash_Code()
         {
             //Given
-            var dictionary = new HashtableDictionary<int, string>();
+            var dictionary = new HashtableDictionary<int, string>
+            {
+                { 11, "1" },
+                { 6, "1" },
+                { 1, "Andrei" }
+            };
             //When
-            dictionary.Add(11, "1");
-            dictionary.Add(6, "1");
-            dictionary.Add(1, "Andrei");
             var enumerator = dictionary.GetEnumerator();
             //Then
             Assert.Equal(3, dictionary.Count);
             Assert.True(enumerator.MoveNext());
-            Assert.Equal(new KeyValuePair<int, string>(11, "1"), enumerator.Current);
+            Assert.Equal(new KeyValuePair<int, string>(1, "Andrei"), enumerator.Current);
             Assert.True(enumerator.MoveNext());
             Assert.Equal(new KeyValuePair<int, string>(6, "1"), enumerator.Current);
             Assert.True(enumerator.MoveNext());
-            Assert.Equal(new KeyValuePair<int, string>(1, "Andrei"), enumerator.Current);
+            Assert.Equal(new KeyValuePair<int, string>(11, "1"), enumerator.Current);
             Assert.False(enumerator.MoveNext());
         }
 
@@ -141,17 +143,18 @@ namespace DictionaryFacts
         public void Test_AddMethod_Should_Work_Properly_Second_Overload()
         {
             //Given
-            var dictionary = new HashtableDictionary<int, string>();
+            var dictionary = new HashtableDictionary<int, string>
+            {
+                { 11, "1" },
+                new KeyValuePair<int, string>(1, "Andrei")
+            };
             //When
-            dictionary.Add(11, "1");
-            dictionary.Add(new KeyValuePair<int, string>(1, "Andrei"));
             var enumerator = dictionary.GetEnumerator();
             //Then
-            Assert.Equal(2, dictionary.Count);
-            Assert.True(enumerator.MoveNext());
-            Assert.Equal(new KeyValuePair<int, string>(11, "1"), enumerator.Current);
             Assert.True(enumerator.MoveNext());
             Assert.Equal(new KeyValuePair<int, string>(1, "Andrei"), enumerator.Current);
+            Assert.True(enumerator.MoveNext());
+            Assert.Equal(new KeyValuePair<int, string>(11, "1"), enumerator.Current);
             Assert.False(enumerator.MoveNext());
         }
 
@@ -178,7 +181,7 @@ namespace DictionaryFacts
         public void Test_Exception_AddMethod_Should_Not_Add_When_List_is_ReadOnly()
         {
             //Given
-            var dictionary = new Dictionary.HashtableDictionary<int, string>
+            var dictionary = new HashtableDictionary<int, string>
             {
                 { 11, "1" }
             };
@@ -197,13 +200,14 @@ namespace DictionaryFacts
         public void Test_KeysProperty_Should_Correctly_Return_List_Of_Keys()
         {
             //Given
-            var dictionary = new HashtableDictionary<string, string>();
-            //When
-            dictionary.Add("Andrei", "Andrei");
-            dictionary.Add("Eusebiu", string.Empty);
-            dictionary.Add("1", "2");
+            var dictionary = new HashtableDictionary<int, string>
+            {
+                { 1, "Andrei" },
+                { 2, string.Empty },
+                { 3, "2" }
+            };
             //Then
-            Assert.Equal(new List<string> { "Andrei", "Eusebiu", "1" }, dictionary.Keys);
+            Assert.Equal(new List<int> { 1, 2, 3 }, dictionary.Keys);
         }
 
         [Fact]
@@ -219,13 +223,14 @@ namespace DictionaryFacts
         public void Test_ValuesProperty_Should_Correctly_Return_List_Of_Keys()
         {
             //Given
-            var dictionary = new HashtableDictionary<string, string>();
-            //When
-            dictionary.Add("Andrei", "Andrei");
-            dictionary.Add("Eusebiu", string.Empty);
-            dictionary.Add("1", "2");
+            var dictionary = new HashtableDictionary<int, int>
+            {
+                { 1, 1 },
+                { 2, 2 },
+                { 3, 3 }
+            };
             //Then
-            Assert.Equal(new List<string> { "Andrei", string.Empty, "2" }, dictionary.Values);
+            Assert.Equal(new List<int> { 1, 2, 3 }, dictionary.Values);
         }
 
         [Fact]
@@ -243,7 +248,6 @@ namespace DictionaryFacts
             //Given
             var dictionary = new HashtableDictionary<string, string>
             {
-                //When
                 { "Andrei", "1" }
             };
             //Then
@@ -282,14 +286,14 @@ namespace DictionaryFacts
         public void Test_ContainsKey_Method_ShouldWork_Properly_More_When_Elements_have_CONFLICTS()
         {
             //Given
-            var dictionary = new HashtableDictionary<int, string>();
-            //When
-            dictionary.Add(1, "Andrei");
-            dictionary.Add(6, "Eusebiu");
-            dictionary.Add(11, "Andrei");
-            dictionary.Add(16, "GTA");
+            var dictionary = new HashtableDictionary<int, string>
+            {
+                { 1, "Andrei" },
+                { 6, "Eusebiu" },
+                { 11, "Andrei" },
+                { 16, "GTA" }
+            };
             //Then
-            Assert.Equal(4, dictionary.Count);
             Assert.True(dictionary.ContainsKey(1));
             Assert.True(dictionary.ContainsKey(6));
             Assert.True(dictionary.ContainsKey(11));
@@ -303,14 +307,14 @@ namespace DictionaryFacts
         public void Test_Contains_Method_ShouldWork_Properly_More_When_Elements_have_CONFLICTS()
         {
             //Given
-            var dictionary = new HashtableDictionary<int, string>();
-            //When
-            dictionary.Add(1, "Andrei");
-            dictionary.Add(6, "Eusebiu");
-            dictionary.Add(11, "Andrei");
-            dictionary.Add(16, "GTA");
+            var dictionary = new HashtableDictionary<int, string>
+            {
+                { 1, "Andrei" },
+                { 6, "Eusebiu" },
+                { 11, "Andrei" },
+                { 16, "GTA" }
+            };
             //Then
-            Assert.Equal(4, dictionary.Count);
             Assert.True(dictionary.Contains(new KeyValuePair<int, string>(1, "Andrei")));
             Assert.True(dictionary.Contains(new KeyValuePair<int, string>(6, "Eusebiu")));
             Assert.True(dictionary.Contains(new KeyValuePair<int, string>(11, "Andrei")));
@@ -569,6 +573,5 @@ namespace DictionaryFacts
             Assert.True(dictionary.ContainsKey(4));
             Assert.Equal(5, dictionary.Count);
         }
-
     }
 }
